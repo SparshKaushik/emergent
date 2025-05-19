@@ -1,0 +1,172 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+**Project:** VibeSync - Real-Time Vibe Check Quiz App
+
+**Core Goal:** Users authenticate via Google, create quizzes with vibe-labeled answers, and share them via a code. Participants take quizzes, see their personal vibe profile evolve, and view live aggregate results for the quiz session updated via WebSockets.
+
+**Tech Stack:**
+
+*   **Frontend:** React with Vite, TanStack Router (`@tanstack/react-router`), TailwindCSS.
+*   **Backend:** ElysiaJS with WebSockets (`@elysiajs/ws`).
+*   **Database:** PostgreSQL (e.g., via Supabase, Neon, or local Docker).
+*   **Authentication:** `better-auth` (Google OAuth for backend), JWTs for session management.
+*   **Deployment:** Vercel (Frontend), Fly.io/Railway/Supabase (Backend + DB).
+
+**Data Models (PostgreSQL):**
+
+1.  **`users`**: `id` (uuid), `email`, `name`, `google_id`, `created_at`
+2.  **`quizzes`**: `id` (uuid), `creator_id` (fk to users), `title`, `description`, `share_code` (unique), `created_at`
+3.  **`questions`**: `id` (uuid), `quiz_id` (fk to quizzes), `text`, `order`
+4.  **`answers`**: `id` (uuid), `question_id` (fk to questions), `text`, `vibe_label`
+5.  **`user_responses`**: `id` (uuid), `quiz_id` (fk to quizzes), `user_id` (fk to users), `question_id` (fk to questions), `selected_answer_id` (fk to answers), `submitted_at`
+
+---
+
+**24-Hour Plan: "VibeSync"**
+
+**Phase 0: Setup & Foundation (0-2.5 Hours)**
+
+*   **[ ] Global:**
+    *   Version control (Git repository).
+*   **[ ] Backend (ElysiaJS):**
+    *   Initialize ElysiaJS project.
+    *   Setup PostgreSQL (e.g., Supabase project, get connection string).
+    *   Define basic DB schema using Prisma (or Drizzle/raw SQL). Run initial migration to create tables.
+    *   Basic "hello world" HTTP endpoint.
+    *   Basic WebSocket setup (`@elysiajs/ws`) - ensure client can connect and server logs connection.
+*   **[ ] Frontend (React + Vite + TanStack Router):**
+    *   Initialize React/Vite project.
+    *   Install & configure TanStack Router:
+        *   Define root route and initial placeholder routes:
+            *   `/` (LandingPage)
+            *   `/login` (LoginPage)
+            *   `/auth/callback` (AuthCallbackPage - handles Google redirect)
+            *   `/dashboard` (UserDashboardPage - protected)
+            *   `/quiz/create` (QuizCreatePage - protected)
+            *   `/quiz/:shareCode/join` (QuizJoinPage)
+            *   `/quiz/:quizId/live` (QuizLivePage - protected)
+        *   Implement basic components for each to test navigation.
+    *   Setup TailwindCSS.
+    *   Simple global layout component (e.g., navbar, footer placeholders).
+    *   Test WebSocket connection from a basic frontend component.
+*   **[ ] Deployment (Initial "Smoke Test"):**
+    *   Deploy basic frontend to Vercel.
+    *   Deploy basic backend to Fly.io/Railway.
+    *   *Ensure both deployment pipelines are working.*
+
+**Phase 1: Authentication & Core User Flow (2.5-7 Hours)**
+
+*   **[ ] Backend (ElysiaJS):**
+    *   Integrate `better-auth` for Google OAuth:
+        *   `/auth/google` endpoint (initiates OAuth flow).
+        *   `/auth/google/callback` endpoint (handles redirect, fetches user info, creates/updates `users` record in DB, generates JWT).
+    *   Middleware for JWT validation to protect specific API routes.
+*   **[ ] Frontend (TanStack Router & Components):**
+    *   **Auth Context/Store:** Create a global state (React Context + useReducer, or Zustand/Jotai) for `user`, `token`, `isAuthenticated`.
+    *   **`/login` Route (LoginPage):**
+        *   "Login with Google" button linking to backend's `/auth/google`.
+    *   **`/auth/callback` Route (AuthCallbackPage):**
+        *   No UI needed. TanStack Router `loader` or component `useEffect` to:
+            *   Check URL for token/error from backend (if backend sends token in URL).
+            *   Or, if backend sets HTTPOnly cookie, this page might just redirect.
+            *   (More common: backend sets cookie, frontend calls a `/api/me` endpoint to get user data after redirect).
+            *   Update auth context/store.
+            *   Navigate to `/dashboard`.
+    *   **Protected Routes Logic (TanStack Router):**
+        *   Implement logic in route definitions or a wrapper component to check `isAuthenticated` from auth context.
+        *   Redirect unauthenticated users from protected routes (`/dashboard`, `/quiz/create`, `/quiz/:quizId/live`) to `/login`.
+    *   **`/dashboard` Route (UserDashboardPage - Basic):**
+        *   Display "Welcome, [User Name]!"
+        *   Logout button (clears auth context/store, calls backend logout if needed, navigates to `/`).
+        *   Links to "Create Quiz".
+
+**Phase 2: Quiz Creation (API & Frontend UI) (7-12 Hours)**
+
+*   **[ ] Backend (ElysiaJS):**
+    *   **Quiz Creation API (`/api/quizzes` - POST, Protected):**
+        *   Input: `title`, `description` (optional), `questions: [{text, order, answers: [{text, vibe_label}]}]`.
+        *   Logic: Validate input. Create `quiz` record (generate unique `share_code`). Create linked `question` and `answer` records.
+        *   Return: The created quiz object (including `id` and `share_code`).
+*   **[ ] Frontend (TanStack Router & Components):**
+    *   **`/quiz/create` Route (QuizCreatePage):**
+        *   Full form for quiz title, description.
+        *   Dynamic form sections for adding/removing questions.
+        *   For each question: input for question text, dynamic form sections for adding/removing answer options (text + vibe_label input).
+        *   **TanStack Router `action` Function:**
+            *   Define an `action` for this route.
+            *   The form `onSubmit` will call this action.
+            *   Action makes the POST request to `/api/quizzes` with form data.
+            *   Handles success: navigates to a "Quiz Created" confirmation page (e.g., `/quiz/:quizId/success` or `/dashboard`) displaying the `share_code`.
+            *   Handles errors: displays error messages on the form.
+    *   **(Optional) `/dashboard` Route:** List quizzes created by the logged-in user (requires a `/api/my-quizzes` GET endpoint).
+
+**Phase 3: Taking a Quiz & Live Updates (Core Gameplay) (12-20 Hours)**
+
+*   **[ ] Backend (ElysiaJS - WebSockets):**
+    *   **WebSocket Setup for Quiz Rooms:**
+        *   On WebSocket connection (e.g., client connects to `/ws` and sends an initial message like `{ type: 'JOIN_QUIZ', payload: { quizId, token } }`):
+            *   Authenticate token.
+            *   Subscribe the WebSocket connection to a topic/room named `quiz-${quizId}`.
+            *   (Optional) Send initial quiz state or participant list to the new user.
+    *   **Handle `SUBMIT_ANSWER` Message:**
+        *   Input: `{ type: 'SUBMIT_ANSWER', payload: { quiz_id, question_id, selected_answer_id } }` (user derived from authenticated WebSocket).
+        *   Validate. Store `user_response` in DB.
+        *   **Calculate Aggregate Results:** Query DB for all responses for this `quiz_id`. Aggregate by `vibe_label` counts, and potentially answer distribution per question.
+        *   **Broadcast Update:** Publish a `{ type: 'QUIZ_UPDATE', payload: { aggregate_results, /* possibly details of last answer */ } }` message to the `quiz-${quizId}` topic.
+*   **[ ] Frontend (TanStack Router & Components):**
+    *   **`/quiz/:shareCode/join` Route (QuizJoinPage):**
+        *   Input for `share_code`.
+        *   On submit, API call to backend (e.g., `/api/quizzes/find-by-code/:shareCode` GET) to validate code and get `quizId` and basic quiz info (title).
+        *   If valid, navigate to `/quiz/:quizId/live`, potentially passing quiz title via route state.
+    *   **`/quiz/:quizId/live` Route (QuizLivePage):**
+        *   **TanStack Router `loader`:** Fetches initial quiz data (questions, answers) for `quizId` from an API endpoint (e.g., `/api/quizzes/:quizId` GET).
+        *   **QuizLive Component:**
+            *   Manages WebSocket connection (connect on mount, disconnect on unmount, join `quiz-${quizId}` room).
+            *   Displays current question and answer options from loader data.
+            *   Handles answer selection: sends `SUBMIT_ANSWER` via WebSocket.
+            *   Manages local state for the user's *own* accumulating vibe profile (calculated client-side based on their answers).
+            *   Navigates through questions. "Quiz Complete" state.
+        *   **LiveResults Component (child of QuizLive):**
+            *   Listens for `QUIZ_UPDATE` WebSocket messages.
+            *   Displays `aggregate_results` (e.g., simple bar charts of vibe labels, counts). This should update dynamically.
+
+**Phase 4: Polish, Shareability & Final Touches (20-24 Hours)**
+
+*   **[ ] Frontend:**
+    *   **Styling:** Ensure "vibe coded" aesthetic. Consistent UI, responsive design touches.
+    *   **User Experience:** Smooth transitions, clear loading states (use TanStack Router's pending states), user feedback for actions/errors.
+    *   **Shareability:**
+        *   On quiz creation success page: "Copy Share Code" button, "Copy Invite Link" (`yourdomain.com/quiz/:shareCode/join`).
+        *   On QuizLivePage: Maybe a "Share this quiz" button.
+    *   Clear display of user's final vibe profile.
+*   **[ ] Backend:**
+    *   Final checks on error handling and security (input validation).
+*   **[ ] General:**
+    *   Thorough testing of all user flows.
+    *   Test with multiple concurrent users on the live quiz page.
+    *   README: Brief explanation of the project, tech stack, how to run locally, and link to the live deployment. Highlight key features and technical decisions.
+    *   Ensure all environment variables are correctly set in Vercel/Fly.io.
+
+**Key Challenges & Considerations:**
+
+*   **Time:** This is *extremely* ambitious for 24 hours. Be prepared to cut scope ruthlessly.
+    *   **Cut first:** Fancy aggregate visualizations (simple lists are fine), extensive user dashboard, email invites.
+    *   **Must-haves:** Google Auth, create quiz (even if UI is basic), join by code, take quiz, see *some* live update.
+*   **WebSocket Complexity:** Managing rooms, authentication, and message broadcasting correctly. ElysiaJS's plugin should help.
+*   **Database Queries for Aggregates:** Optimize if they become slow, but for a demo, straightforward queries are fine.
+*   **State Management (Frontend):** Keeping auth state, quiz state, and WebSocket data in sync.
+*   **Error Handling:** Critical for a good UX.
+
+**Prioritization Strategy if Running Low on Time:**
+
+1.  Core Auth (Google Login)
+2.  Backend API for Quiz Create (can test with Postman)
+3.  Frontend to Join Quiz by Code & Fetch Questions
+4.  Frontend to Submit Answers via WebSocket
+5.  Backend WebSocket to Receive Answers & Broadcast a *Simple* Update (e.g., just a "new answer submitted" message, then evolve to aggregates)
+6.  Frontend to Display Basic Live Update
+7.  Frontend UI for Quiz Creation
+8.  Polish, better aggregate displays, etc.

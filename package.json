@@ -1,0 +1,7 @@
+{
+  "name": "emergent",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
