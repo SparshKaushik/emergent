@@ -1,4 +1,3 @@
-import React from "react";
 import { Badge } from "@/components/ui/badge";
 import type { VibeDistribution } from "@/lib/VibeDisplayUtils";
 

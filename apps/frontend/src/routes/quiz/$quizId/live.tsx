@@ -4,12 +4,11 @@ import {
   useParams,
   redirect,
 } from "@tanstack/react-router";
-import React, { useState, useEffect } from "react";
-import { useSession, getSession } from "@/lib/auth";
+import { useState } from "react";
+import { getSession } from "@/lib/auth";
 import {
   useQuizDetailsQuery,
   useSubmitQuizAnswersMutation,
-  type QuizDetailsResponse,
   type SubmittedAnswerPayload,
 } from "@/lib/api/quizApi";
 import { Button } from "@/components/ui/button";

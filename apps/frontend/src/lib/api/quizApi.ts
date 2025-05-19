@@ -183,9 +183,6 @@ export const useJoinQuizMutation = (
     { shareCode: string }
   >
 ) => {
-  // const { data: sessionData } = useSession(); // Not strictly needed for this call, auth might be handled by endpoint or not required for find-by-code
-  const queryClient = useQueryClient(); // Not strictly needed if not invalidating, but good practice
-
   return useMutation<QuizInfoByShareCodeResponse, Error, { shareCode: string }>(
     {
       mutationFn: async ({

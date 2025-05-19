@@ -1,4 +1,3 @@
-import React from "react";
 import type { VibePercent } from "@/lib/VibeDisplayUtils";
 
 interface VibeBreakdownBarProps {

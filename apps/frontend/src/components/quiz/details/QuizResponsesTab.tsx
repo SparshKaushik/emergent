@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useSession } from "@/lib/auth";
 import {
   Card,
@@ -41,7 +41,7 @@ export function QuizResponsesTab({
   quizDetails,
 }: QuizResponsesTabProps) {
   const { data: sessionData } = useSession();
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [_, setWs] = useState<WebSocket | null>(null);
   const [wsStatus, setWsStatus] = useState<WebSocketStatus>("Closed");
   const [wsUserResponses, setWsUserResponses] = useState<LiveUserResponse[]>(
     []

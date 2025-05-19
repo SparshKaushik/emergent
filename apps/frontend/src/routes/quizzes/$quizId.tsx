@@ -19,7 +19,7 @@ import {
   AlertCircleIcon as WsAlertIcon,
 } from "lucide-react";
 import { useQuizDetailsQuery } from "@/lib/api/quizApi";
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useSession } from "@/lib/auth";
 import {
   calculateVibePercentages,
@@ -58,13 +58,6 @@ interface UserVibeData {
   totalAnswers: number; // Total answers submitted by this user for this quiz
 }
 
-interface UserResponseFromAPI extends UserVibeData {
-  id: string; // This could be a unique ID for the response set or user's participation
-  userId: string;
-  userName: string | null;
-  submittedAt: string; // Timestamp of the last submission or when profile was generated
-}
-
 // This type should match the data sent by the backend's GET_QUIZ_RESPONSES WebSocket event
 interface LiveUserResponse extends UserVibeData {
   id: string; // User ID or a unique identifier for the live update
@@ -95,8 +88,7 @@ function QuizDetailsPage() {
     error: Error | null;
   };
 
-  // Remove httpUserResponses and related states
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [_, setWs] = useState<WebSocket | null>(null);
   const [wsStatus, setWsStatus] = useState<WebSocketStatus>("Closed");
   const [wsUserResponses, setWsUserResponses] = useState<LiveUserResponse[]>(
     []
@@ -104,7 +96,6 @@ function QuizDetailsPage() {
   const [wsError, setWsError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimerRef = useRef<number | null>(null); // Use ref for retry timer ID
-  // const [retryCount, setRetryCount] = useState(0); // To be removed
   const [isManualRetryVisible, setIsManualRetryVisible] = useState(false);
 
   const connectWebSocket = (quizId: string, session: any) => {
