@@ -3,5 +3,15 @@
   "private": true,
   "workspaces": [
     "apps/*"
-  ]
+  ],
+  "scripts": {
+    "build:frontend": "cd apps/frontend && bun run build",
+    "dev:backend": "bun run --watch apps/backend/src/index.ts",
+    "build:backend": "bun build apps/backend/src/index.ts --compile --outfile server",
+    "start:backend": "bun run apps/backend/src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  }
 }
