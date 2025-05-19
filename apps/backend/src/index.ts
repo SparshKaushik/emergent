@@ -9,7 +9,7 @@ import { webSocketHandler } from "./ws";
 const app = new Elysia()
   .use(
     cors({
-      origin: "http://localhost:3000",
+      origin: "https://vibesync.dokploy.touchtech.club",
     })
   )
   .use(swagger())
